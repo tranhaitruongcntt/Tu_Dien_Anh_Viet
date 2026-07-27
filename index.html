@@ -478,26 +478,82 @@
   .toast.err { background: var(--danger); }
   .toast.ok  { background: var(--ok); }
 
+  /* ============ TABLET (iPad portrait ~768, landscape ~1024) ============ */
+  @media (max-width: 1180px) {
+    .topbar, .toolbar { padding-left: 18px; padding-right: 18px; }
+    main { padding-left: 18px; padding-right: 18px; }
+    thead th, tbody td { padding: 14px 14px; }
+    .word-cell { font-size: 16px; }
+    tbody td { font-size: 14.5px; }
+    /* Ẩn Ngày thêm tooltip khi bé — vẫn giữ note + source */
+  }
+
   @media (max-width: 900px) {
-    .topbar { padding: 10px 14px; }
-    .topbar-inner { flex-wrap: wrap; }
+    .topbar { padding: 10px 14px; gap: 10px; }
+    .topbar-inner { flex-wrap: wrap; gap: 10px; }
     .brand { order: 1; }
     .direction-group { order: 2; }
-    .word-input { order: 4; width: 100%; }
-    .btn-primary { order: 3; margin-left: auto; }
+    .btn-primary { order: 3; margin-left: auto; padding: 10px 14px; }
+    .word-input { order: 4; width: 100%; flex-basis: 100%; }
     main { padding: 14px 14px 0; }
     .toolbar { padding: 10px 14px; }
+    .toolbar-inner { gap: 8px; }
+    .toolbar .stats { margin-left: 0; width: 100%; justify-content: space-between; padding-top: 4px; border-top: 1px dashed var(--line); }
     .detail { grid-template-columns: 1fr; gap: 18px; padding: 18px; }
-    /* Ẩn Ghi chú + Nguồn khi hẹp */
+    /* Ẩn Nguồn + Ghi chú */
     thead th:nth-child(6), tbody td:nth-child(6),
     thead th:nth-child(7), tbody td:nth-child(7) { display: none; }
     tbody td { padding: 12px 14px; font-size: 14px; }
     .word-cell { font-size: 15.5px; }
+    /* Lang tabs cuộn ngang nếu tràn */
+    .lang-tabs { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+    .lang-tabs::-webkit-scrollbar { display: none; }
+    .lang-tab { flex-shrink: 0; }
+    /* Pagination gọn */
+    .pagination { padding: 12px 14px; gap: 8px; }
+    .page-info { font-size: 12px; width: 100%; order: -1; text-align: center; }
+    .page-nav { flex: 1; justify-content: center; }
+    .page-size { font-size: 12px; padding: 6px 8px; }
+    /* Brand logo bé lại */
+    .brand-logo { height: 34px; }
   }
+
+  /* ============ MOBILE (iPhone / Android <= 600) ============ */
   @media (max-width: 600px) {
-    /* Ẩn thêm Loại + Cách đọc VN */
+    body { font-size: 14.5px; }
+    .topbar { padding: 10px 12px; }
+    main, .toolbar { padding-left: 12px; padding-right: 12px; }
+    .brand-logo { height: 30px; }
+    .btn-primary { padding: 9px 12px; font-size: 13px; }
+    .dir-btn { padding: 8px 10px; font-size: 12px; }
+    .word-input { padding: 9px 14px; font-size: 15px; }
+    /* Ẩn Loại + Cách đọc VN + Nguồn + Ghi chú → chỉ còn Từ, IPA, Nghĩa, Actions */
     thead th:nth-child(2), tbody td:nth-child(2),
     thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
+    thead th, tbody td { padding: 10px 10px; font-size: 13px; }
+    .word-cell { font-size: 14.5px; }
+    .ipa-cell { font-size: 12.5px; }
+    .icon-btn { width: 30px; height: 30px; border-radius: 6px; }
+    .icon-btn svg { width: 12px; height: 12px; }
+    .actions { gap: 3px; }
+    /* Composer header (sources status) ẩn để gọn */
+    .composer-head .sources { display: none; }
+    /* Table wrap không có border radius trên mobile — full bleed */
+    .table-wrap { border-radius: 10px; margin-left: -2px; margin-right: -2px; }
+    /* Lang tab nhỏ */
+    .lang-tab { padding: 8px 12px; font-size: 12.5px; }
+    .lang-tab .count { padding: 1px 6px; font-size: 10.5px; }
+    .lang-tab .flag { display: none; }
+    /* Pagination — ẩn nút First/Last */
+    .page-btn[data-page="first"], .page-btn[data-page="last"] { display: none; }
+    .page-btn { min-width: 32px; height: 32px; font-size: 12px; }
+  }
+
+  /* Touch device — không hover, giữ visual state cho tap */
+  @media (hover: none) {
+    .icon-btn:active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+    .btn-ghost:active { border-color: var(--accent); color: var(--accent); }
+    .word-chip:active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
   }
 </style>
 </head>
@@ -1122,9 +1178,16 @@ async function refreshEntry(id) {
 }
 
 function exportCsv() {
-  const rows = [['Từ','Ngôn ngữ','IPA','Cách đọc VN','Nghĩa','Ví dụ','Nguồn']];
+  const rows = [['Từ','Ngôn ngữ','Loại','IPA','Cách đọc VN','Nghĩa','Ghi chú','Ví dụ','Nguồn','Ngày thêm']];
   for (const e of state.entries) {
-    rows.push([e.word, e.srcLang, e.ipa || '', e.viRead || '', e.meaning || '', e.example || '', (e.sources || []).join('|')]);
+    rows.push([
+      e.word, e.srcLang, e.pos || '',
+      e.ipa || '', e.viRead || '',
+      e.meaning || '', e.note || '',
+      e.example || '',
+      (e.sources || []).join('|'),
+      e.createdAt ? new Date(e.createdAt).toISOString() : '',
+    ]);
   }
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const blob = new Blob(['﻿' + csv], {type: 'text/csv;charset=utf-8'});
@@ -1139,22 +1202,51 @@ function importCsv(file) {
   reader.onload = e => {
     const text = String(e.target.result || '').replace(/^﻿/, '');
     const lines = text.split(/\r?\n/).filter(Boolean);
-    let added = 0;
+    if (!lines.length) { toast('File rỗng', 'err'); return; }
+    // Đọc header để hỗ trợ cả format cũ (7 cột) lẫn mới (10 cột)
+    const header = parseCsvLine(lines[0]).map(h => h.toLowerCase().trim());
+    const idx = {
+      word:    header.findIndex(h => h.startsWith('từ') || h === 'word'),
+      srcLang: header.findIndex(h => h.startsWith('ngôn') || h === 'lang' || h === 'srclang'),
+      pos:     header.findIndex(h => h.startsWith('loại') || h === 'pos'),
+      ipa:     header.findIndex(h => h === 'ipa' || h.startsWith('phiên âm')),
+      viRead:  header.findIndex(h => h.startsWith('cách đọc') || h === 'viread'),
+      meaning: header.findIndex(h => h.startsWith('nghĩa') || h === 'meaning'),
+      note:    header.findIndex(h => h.startsWith('ghi chú') || h === 'note'),
+      example: header.findIndex(h => h.startsWith('ví dụ') || h === 'example'),
+      sources: header.findIndex(h => h.startsWith('nguồn') || h === 'sources'),
+      createdAt: header.findIndex(h => h.startsWith('ngày') || h === 'createdat'),
+    };
+    if (idx.word < 0) idx.word = 0; // fallback: cột đầu
+    if (idx.srcLang < 0) idx.srcLang = 1;
+
+    let added = 0, skipped = 0;
     for (const line of lines.slice(1)) {
       const parts = parseCsvLine(line);
-      if (!parts[0]) continue;
-      const [word, srcLang='en', ipa='', viRead='', meaning='', example=''] = parts;
-      if (state.entries.find(x => x.word.toLowerCase() === word.toLowerCase())) continue;
+      const word = (parts[idx.word] || '').trim();
+      if (!word) continue;
+      const srcLang = (parts[idx.srcLang] || 'en').trim() || 'en';
+      if (state.entries.find(x => x.word.toLowerCase() === word.toLowerCase() && x.srcLang === srcLang)) {
+        skipped++; continue;
+      }
+      const src = idx.sources >= 0 ? (parts[idx.sources] || '').split('|').filter(Boolean) : [];
+      const created = idx.createdAt >= 0 ? Date.parse(parts[idx.createdAt] || '') : NaN;
       state.entries.push({
         id: 'e_' + Math.random().toString(36).slice(2,10),
         word, srcLang, dstLang: srcLang === 'en' ? 'vi' : 'en',
-        ipa, viRead, meaning, example, sources: [], defs: [], syns: [], ants: [], audios: [],
-        createdAt: Date.now(),
+        pos:     idx.pos >= 0 ? (parts[idx.pos] || '') : '',
+        ipa:     idx.ipa >= 0 ? (parts[idx.ipa] || '') : '',
+        viRead:  idx.viRead >= 0 ? (parts[idx.viRead] || '') : '',
+        meaning: idx.meaning >= 0 ? (parts[idx.meaning] || '') : '',
+        note:    idx.note >= 0 ? (parts[idx.note] || '') : '',
+        example: idx.example >= 0 ? (parts[idx.example] || '') : '',
+        sources: src, defs: [], syns: [], ants: [], audios: [],
+        createdAt: isNaN(created) ? Date.now() : created,
       });
       added++;
     }
     save(); render();
-    toast(`Đã nhập ${added} từ`, 'ok');
+    toast(`Nhập ${added} từ${skipped ? ` · bỏ qua ${skipped} trùng` : ''}`, 'ok');
   };
   reader.readAsText(file, 'utf-8');
 }
