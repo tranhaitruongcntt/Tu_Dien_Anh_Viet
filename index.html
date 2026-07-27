@@ -148,6 +148,66 @@
   .suggest-pill b { color: var(--text); font-weight: 700; }
   .suggest-pill svg { width: 12px; height: 12px; }
 
+  /* Báo lỗi chính tả - banner đỏ */
+  .spell-error {
+    display: flex; align-items: center; gap: 14px;
+    flex-wrap: wrap;
+    background: #fef2f2; border: 1px solid #fca5a5;
+    color: #991b1b;
+    padding: 10px 14px; border-radius: 10px;
+    font-size: 13.5px;
+    box-shadow: 0 1px 3px rgba(220,38,38,.08);
+  }
+  .spell-error .err-icon {
+    width: 20px; height: 20px; flex-shrink: 0;
+    color: #dc2626;
+  }
+  .spell-error .err-body { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; min-width: 200px; }
+  .spell-error .err-title { font-weight: 700; color: #991b1b; }
+  .spell-error .diff-line {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: #7f1d1d;
+  }
+  .spell-error .diff-line span.label {
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: #b91c1c; font-weight: 600; min-width: 62px;
+  }
+  .spell-error .diff-word {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14.5px; letter-spacing: .04em;
+    color: #1a1614;
+  }
+  .spell-error .diff-word .char-added {
+    background: #bbf7d0; color: #14532d;
+    padding: 0 2px; border-radius: 3px;
+    font-weight: 700;
+  }
+  .spell-error .diff-word .char-removed {
+    background: #fecaca; color: #991b1b;
+    padding: 0 2px; border-radius: 3px;
+    text-decoration: line-through;
+  }
+  .spell-error .btn-use-correct {
+    background: #dc2626; color: #fff;
+    padding: 7px 14px; border-radius: 8px;
+    font-weight: 600; font-size: 13px;
+    flex-shrink: 0;
+    transition: background .16s ease;
+  }
+  .spell-error .btn-use-correct:hover { background: #b91c1c; }
+  .spell-error .btn-dismiss {
+    background: transparent; color: #991b1b;
+    padding: 6px 10px; border-radius: 6px;
+    font-size: 12.5px;
+    border: 1px solid transparent;
+  }
+  .spell-error .btn-dismiss:hover { border-color: #fca5a5; background: #fee2e2; }
+  /* Word input viền đỏ khi có lỗi */
+  .word-input.spell-invalid {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220,38,38,.12);
+  }
+
   /* ============ TOOLBAR ============ */
   .toolbar {
     background: var(--surface);
@@ -923,19 +983,84 @@ async function addWord(rawWord) {
   }
 }
 
+// Diff 2 chuỗi bằng Longest Common Subsequence
+// Trả về HTML: chuỗi "sai" (removed đỏ), chuỗi "đúng" (added xanh)
+function wordDiff(wrong, right) {
+  const m = wrong.length, n = right.length;
+  const dp = [];
+  for (let i = 0; i <= m; i++) dp.push(new Array(n + 1).fill(0));
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+    if (wrong[i-1].toLowerCase() === right[j-1].toLowerCase()) dp[i][j] = dp[i-1][j-1] + 1;
+    else dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+  }
+  const wOut = [], rOut = [];
+  let i = m, j = n;
+  while (i > 0 && j > 0) {
+    if (wrong[i-1].toLowerCase() === right[j-1].toLowerCase()) {
+      wOut.unshift({ c: wrong[i-1], t: 'same' });
+      rOut.unshift({ c: right[j-1], t: 'same' });
+      i--; j--;
+    } else if (dp[i-1][j] >= dp[i][j-1]) {
+      wOut.unshift({ c: wrong[i-1], t: 'removed' });
+      i--;
+    } else {
+      rOut.unshift({ c: right[j-1], t: 'added' });
+      j--;
+    }
+  }
+  while (i > 0) { i--; wOut.unshift({ c: wrong[i], t: 'removed' }); }
+  while (j > 0) { j--; rOut.unshift({ c: right[j], t: 'added' }); }
+  const toHtml = arr => arr.map(x =>
+    x.t === 'same' ? escapeHtml(x.c) :
+    x.t === 'added' ? `<span class="char-added">${escapeHtml(x.c)}</span>` :
+    `<span class="char-removed">${escapeHtml(x.c)}</span>`
+  ).join('');
+  return {
+    wrongHtml: toHtml(wOut),
+    rightHtml: toHtml(rOut),
+    diffCount: wOut.filter(x => x.t !== 'same').length + rOut.filter(x => x.t !== 'same').length,
+  };
+}
+
 function showSuggest(entryId, suggest) {
   const hint = document.getElementById('hint');
+  const input = document.getElementById('word-input');
   hint.innerHTML = '';
-  const box = document.createElement('button');
-  box.className = 'suggest-pill';
-  box.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Có phải: <b>${escapeHtml(suggest)}</b>? Nhấn để dùng`;
-  box.onclick = () => {
-    state.entries = state.entries.filter(e => e.id !== entryId);
-    save(); render(); hint.innerHTML = '';
-    addWord(suggest);
-  };
-  hint.appendChild(box);
-  setTimeout(() => { if (hint.contains(box)) box.remove(); }, 15000);
+  const entry = state.entries.find(e => e.id === entryId);
+  const wrong = entry ? entry.word : '';
+  const { wrongHtml, rightHtml } = wordDiff(wrong, suggest);
+  input.classList.add('spell-invalid');
+
+  const banner = document.createElement('div');
+  banner.className = 'spell-error';
+  banner.innerHTML = `
+    <svg class="err-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <div class="err-body">
+      <div class="err-title">Có thể sai chính tả</div>
+      <div class="diff-line"><span class="label">Bạn gõ:</span><span class="diff-word">${wrongHtml}</span></div>
+      <div class="diff-line"><span class="label">Đúng là:</span><span class="diff-word">${rightHtml}</span></div>
+    </div>
+    <button class="btn-use-correct" data-action="use">Dùng <b>${escapeHtml(suggest)}</b></button>
+    <button class="btn-dismiss" data-action="dismiss">Vẫn giữ</button>
+  `;
+  banner.addEventListener('click', ev => {
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    input.classList.remove('spell-invalid');
+    if (btn.dataset.action === 'use') {
+      state.entries = state.entries.filter(e => e.id !== entryId);
+      save(); render(); hint.innerHTML = '';
+      addWord(suggest);
+    } else {
+      hint.innerHTML = '';
+    }
+  });
+  hint.appendChild(banner);
+  setTimeout(() => {
+    if (hint.contains(banner)) { banner.remove(); input.classList.remove('spell-invalid'); }
+  }, 20000);
 }
 
 /* Render */
