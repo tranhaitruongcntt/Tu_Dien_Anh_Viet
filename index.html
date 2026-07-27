@@ -867,6 +867,23 @@ async function apiDatamuse(word) {
   } catch (e) { return null; }
 }
 
+// Spell-check: Datamuse `sp` trả gợi ý từ đúng khi input sai chính tả
+async function apiSpellCheck(word) {
+  try {
+    const r = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(word)}&max=3`);
+    if (!r.ok) return null;
+    const arr = await r.json();
+    if (!Array.isArray(arr) || !arr.length) return null;
+    const top = arr[0];
+    if (!top.word) return null;
+    // Nếu top match chính là input → đúng chính tả
+    if (top.word.toLowerCase() === word.toLowerCase()) return null;
+    // Score < 60 → gợi ý yếu, bỏ qua để tránh false positive
+    if (typeof top.score === 'number' && top.score < 60) return null;
+    return top.word;
+  } catch (e) { return null; }
+}
+
 /* TTS + MP3 */
 async function loadVoices() {
   return new Promise(resolve => {
@@ -938,7 +955,6 @@ async function addWord(rawWord) {
     if (gt) {
       entry.meaning = gt.translation || '';
       entry.sources.push(SRC.GT);
-      if (gt.suggest && gt.suggest.toLowerCase() !== word.toLowerCase()) showSuggest(entry.id, gt.suggest);
     }
     if (mm) {
       entry.sources.push(SRC.MM);
@@ -965,6 +981,12 @@ async function addWord(rawWord) {
         entry.sources.push(SRC.WIK);
       }
       if (dm)  { entry.syns = [...new Set([...entry.syns, ...dm.syns])].slice(0, 15); entry.related = dm.related; entry.sources.push(SRC.DM); }
+
+      // SPELL-CHECK: nếu tra từ EN mà cả dict lẫn wiktionary đều không có → có thể sai chính tả
+      if (srcLang === 'en' && !dict && !wik) {
+        const suggest = await apiSpellCheck(word);
+        if (suggest) showSuggest(entry.id, suggest);
+      }
     }
   } catch (e) { toast('Có lỗi khi tra từ', 'err'); }
   finally {
