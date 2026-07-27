@@ -1,0 +1,1360 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>trevo · Từ điển</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:         #f7f4ee;
+    --surface:    #ffffff;
+    --surface-2:  #fbf9f4;
+    --surface-3:  #f0ebe0;
+    --line:       #e5dfd1;
+    --line-2:     #d6ceba;
+    --text:       #1a1614;
+    --text-2:     #4a4238;
+    --muted:      #857b6d;
+    --accent:     #a67c3f;
+    --accent-2:   #8a6530;
+    --accent-soft:#f4ead6;
+    --danger:     #b04d4d;
+    --ok:         #4a7c59;
+    --info:       #4a6f8f;
+    --shadow-sm:  0 1px 2px rgba(74,52,20,.04);
+    --shadow-md:  0 4px 14px -4px rgba(74,52,20,.10);
+    --shadow-lg:  0 12px 32px -12px rgba(74,52,20,.14);
+    --radius:     12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 15.5px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column;
+    min-height: 100vh;
+    /* Chặn chọn text (trừ input) */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  /* Vẫn cho phép chọn/gõ trong ô nhập */
+  input, textarea, [contenteditable="true"], .cell-word span, .meaning-cell {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+  img { -webkit-user-drag: none; user-drag: none; pointer-events: auto; }
+  button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; }
+  input { font: inherit; color: inherit; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: .92em; }
+
+  /* ============ TOP BAR — composer inline ============ */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 24px;
+    position: sticky; top: 0; z-index: 30;
+    box-shadow: var(--shadow-sm);
+  }
+  .topbar-inner {
+    display: flex; align-items: center; gap: 16px;
+    max-width: none;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .brand-logo {
+    height: 42px; width: auto; display: block;
+    object-fit: contain;
+  }
+  .brand-mark-img {
+    height: 38px; width: 38px; object-fit: contain;
+    display: block;
+  }
+  .brand-name { font-weight: 700; letter-spacing: -.01em; font-size: 17px; }
+  .brand-sub { color: var(--muted); font-size: 13px; margin-left: 4px; font-weight: 400; }
+
+  .direction-group {
+    display: inline-flex; align-items: stretch;
+    background: var(--surface-3); border: 1px solid var(--line);
+    border-radius: 10px; padding: 3px; gap: 2px;
+    flex-shrink: 0;
+  }
+  .dir-btn {
+    padding: 8px 14px; border-radius: 7px;
+    color: var(--text-2); font-weight: 600; font-size: 12.5px;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all .16s ease;
+  }
+  .dir-btn.active {
+    background: var(--surface); color: var(--accent);
+    box-shadow: var(--shadow-sm);
+  }
+  .dir-btn.icon-only { padding: 8px 9px; color: var(--muted); }
+  .dir-btn.icon-only:hover { color: var(--accent); }
+  .dir-btn svg { width: 13px; height: 13px; }
+
+  .word-input {
+    flex: 1 1 auto; min-width: 200px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 16px;
+    font-size: 14.5px; outline: none;
+    transition: border .16s ease, box-shadow .16s ease;
+  }
+  .word-input::placeholder { color: var(--muted); }
+  .word-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    padding: 10px 20px; border-radius: 10px;
+    font-weight: 600; font-size: 13.5px;
+    display: inline-flex; align-items: center; gap: 6px;
+    flex-shrink: 0;
+    transition: background .16s ease, transform .1s ease;
+  }
+  .btn-primary:hover { background: var(--accent-2); }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-primary svg { width: 14px; height: 14px; }
+
+  .hint-bar {
+    max-width: none;
+    padding-top: 8px;
+    min-height: 0;
+  }
+  .hint-bar:empty { display: none; }
+  .suggest-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-soft); border: 1px solid var(--line-2);
+    color: var(--accent-2);
+    padding: 5px 12px; border-radius: 999px;
+    font-size: 12.5px;
+  }
+  .suggest-pill:hover { background: #efe1c4; }
+  .suggest-pill b { color: var(--text); font-weight: 700; }
+  .suggest-pill svg { width: 12px; height: 12px; }
+
+  /* ============ TOOLBAR ============ */
+  .toolbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 24px;
+  }
+  .toolbar-inner {
+    max-width: none;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .search-wrap { flex: 1 1 260px; min-width: 220px; position: relative; }
+  .search-wrap svg {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    width: 15px; height: 15px; color: var(--muted); pointer-events: none;
+  }
+  .search-input {
+    width: 100%; background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 9px; padding: 9px 14px 9px 36px;
+    font-size: 13.5px; outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); background: var(--surface); }
+  .btn-ghost {
+    background: var(--surface); border: 1px solid var(--line);
+    padding: 9px 13px; border-radius: 9px;
+    font-size: 12.5px; font-weight: 500; color: var(--text-2);
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all .16s ease;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-ghost.danger:hover { border-color: var(--danger); color: var(--danger); }
+  .btn-ghost svg { width: 13px; height: 13px; }
+  .toolbar .stats {
+    margin-left: auto;
+    color: var(--muted); font-size: 12.5px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .toolbar .stats b { color: var(--text); font-weight: 700; }
+  .src-status { display: flex; align-items: center; gap: 6px; }
+  .source-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--line-2); display: inline-block;
+    transition: all .3s ease;
+  }
+  .source-dot.on { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+
+  /* ============ MAIN TABLE ============ */
+  main {
+    flex: 1 1 auto;
+    padding: 20px 24px 0;
+    max-width: none;
+    width: 100%;
+    display: flex; flex-direction: column;
+  }
+
+  /* Language tabs */
+  .lang-tabs {
+    display: flex; gap: 4px;
+    margin-bottom: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 5px;
+    box-shadow: var(--shadow-sm);
+    align-self: flex-start;
+  }
+  .lang-tab {
+    padding: 9px 18px; border-radius: 8px;
+    color: var(--text-2); font-weight: 600; font-size: 13.5px;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: all .16s ease;
+  }
+  .lang-tab:hover:not(.active) {
+    background: var(--surface-2); color: var(--accent);
+  }
+  .lang-tab.active {
+    background: var(--accent); color: #fff;
+    box-shadow: 0 2px 8px rgba(166,124,63,.25);
+  }
+  .lang-tab .count {
+    background: rgba(0,0,0,.08); color: inherit;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 700;
+    letter-spacing: .02em;
+  }
+  .lang-tab.active .count {
+    background: rgba(255,255,255,.22);
+  }
+  .lang-tab .flag {
+    font-family: 'Fraunces', serif; font-weight: 500;
+    font-size: 11px; letter-spacing: .1em;
+    padding: 2px 7px; border-radius: 4px;
+    background: rgba(0,0,0,.06);
+  }
+  .lang-tab.active .flag { background: rgba(255,255,255,.18); }
+
+  /* Direction group locked state */
+  .direction-group.locked { opacity: .55; pointer-events: none; }
+  .direction-group.locked .dir-btn:not(.active) { display: none; }
+  .direction-group.locked .dir-btn.icon-only { display: none; }
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    flex: 1 1 auto;
+    display: flex; flex-direction: column;
+  }
+  .table-scroll { overflow: auto; flex: 1 1 auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; padding: 16px 20px;
+    color: var(--muted); font-weight: 600; font-size: 12px;
+    letter-spacing: .12em; text-transform: uppercase;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+    position: sticky; top: 0; z-index: 2;
+  }
+  thead th.sortable { cursor: pointer; user-select: none; }
+  thead th.sortable:hover { color: var(--accent); }
+  tbody tr {
+    border-bottom: 1px solid var(--line);
+    transition: background .12s ease;
+  }
+  tbody tr:last-child { border-bottom: 0; }
+  tbody tr:hover { background: var(--surface-2); }
+  tbody tr.expanded { background: var(--accent-soft); }
+  tbody td { padding: 16px 20px; vertical-align: middle; font-size: 15.5px; }
+
+  .word-cell { font-weight: 600; font-size: 17px; color: var(--text); letter-spacing: -.005em; }
+  .word-lang {
+    display: inline-block; margin-left: 8px;
+    padding: 2px 7px; border-radius: 4px;
+    background: var(--surface-3); color: var(--muted);
+    font-size: 10.5px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; vertical-align: middle;
+  }
+  .ipa-cell {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent-2); font-size: 14.5px;
+  }
+  .read-cell {
+    font-family: 'Fraunces', serif; font-style: italic;
+    color: var(--text-2); font-size: 15.5px;
+  }
+  .meaning-cell { color: var(--text); line-height: 1.55; font-size: 15.5px; }
+  .pos-badge {
+    display: inline-block;
+    padding: 3px 9px; border-radius: 6px;
+    background: var(--surface-3); color: var(--accent-2);
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 13px; font-weight: 500;
+    letter-spacing: .02em;
+  }
+  .pos-badge:empty::after { content: '—'; color: var(--muted); font-style: normal; font-family: 'Inter'; }
+  .note-cell {
+    color: var(--text-2); font-size: 14px;
+    font-style: italic; font-family: 'Fraunces', serif;
+    display: inline-block; min-width: 60px; min-height: 22px;
+  }
+  .note-cell:empty::before {
+    content: 'Ghi chú…'; color: var(--muted); opacity: .5;
+  }
+  .source-badges { display: flex; gap: 3px; flex-wrap: wrap; }
+  .src-badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 4px;
+    background: var(--surface-3); color: var(--text-2); font-weight: 600;
+    letter-spacing: .04em;
+  }
+  .src-badge.dict { color: #3d7a4a; background: #e7f2e7; }
+  .src-badge.wik  { color: #3d5c7a; background: #e2eaf3; }
+  .src-badge.dm   { color: #8a5f2a; background: #f4ead1; }
+  .src-badge.gt   { color: #7a3d5c; background: #f3e2ea; }
+  .src-badge.mm   { color: #8a3d3d; background: #f4d9d9; }
+
+  [contenteditable="true"] {
+    outline: none; border-radius: 5px;
+    padding: 3px 6px; margin: -3px -6px;
+    transition: background .12s ease;
+  }
+  [contenteditable="true"]:hover { background: rgba(0,0,0,.04); }
+  [contenteditable="true"]:focus {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 1px var(--accent) inset;
+  }
+
+  .actions { display: flex; gap: 4px; justify-content: flex-end; }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: 7px;
+    border: 1px solid var(--line); color: var(--muted);
+    background: var(--surface);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all .15s ease;
+  }
+  .icon-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); background: #fbe9e9; }
+  .icon-btn.playing {
+    color: var(--accent); border-color: var(--accent);
+    background: var(--accent-soft);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .icon-btn svg { width: 14px; height: 14px; }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(166,124,63,.3); }
+    50%     { box-shadow: 0 0 0 5px rgba(166,124,63,0); }
+  }
+
+  /* Skeleton */
+  .skeleton { color: transparent !important; position: relative; }
+  .skeleton::after {
+    content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 60%; height: 10px; border-radius: 4px;
+    background: linear-gradient(90deg, var(--surface-3) 0%, var(--line) 50%, var(--surface-3) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* Detail row */
+  tr.detail-row { background: var(--surface-2) !important; }
+  tr.detail-row:hover { background: var(--surface-2) !important; }
+  tr.detail-row td { padding: 0 !important; border-bottom: 1px solid var(--line) !important; }
+  .detail {
+    padding: 22px 28px;
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px;
+  }
+  .detail h4 {
+    color: var(--muted); font-size: 11px;
+    letter-spacing: .14em; text-transform: uppercase; font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .detail .defs { list-style: none; padding-left: 0; }
+  .detail .defs li {
+    padding: 8px 0; border-bottom: 1px dashed var(--line);
+    font-size: 14px; line-height: 1.6;
+  }
+  .detail .defs li:last-child { border-bottom: 0; }
+  .detail .defs li .pos {
+    color: var(--accent); font-size: 11px; font-weight: 600;
+    letter-spacing: .08em; text-transform: uppercase; margin-right: 8px;
+    font-style: italic; font-family: 'Fraunces', serif;
+  }
+  .detail .defs li .ex {
+    display: block; color: var(--muted); font-style: italic;
+    margin-top: 4px; font-size: 13px;
+  }
+  .word-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .word-chip {
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+    color: var(--text-2); font-size: 12.5px;
+    transition: all .15s ease;
+  }
+  .word-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .audio-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .audio-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--line);
+    color: var(--text-2); font-size: 12.5px;
+    transition: all .15s ease;
+  }
+  .audio-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .audio-btn svg { width: 13px; height: 13px; }
+  .audio-btn.tts { color: var(--info); }
+
+  .empty {
+    padding: 60px 20px; text-align: center; color: var(--muted);
+  }
+  .empty svg { width: 44px; height: 44px; color: var(--line-2); margin-bottom: 14px; }
+  .empty h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; color: var(--text-2); margin-bottom: 6px; }
+  .empty p { font-size: 13px; }
+
+  /* ============ PAGINATION ============ */
+  .pagination {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+    background: var(--surface-2);
+    border-top: 1px solid var(--line);
+    flex-wrap: wrap; gap: 12px;
+  }
+  .page-info { color: var(--muted); font-size: 12.5px; }
+  .page-info b { color: var(--text); font-weight: 700; }
+  .page-nav { display: flex; align-items: center; gap: 4px; }
+  .page-btn {
+    min-width: 34px; height: 34px; padding: 0 10px;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--surface); color: var(--text-2);
+    font-size: 13px; font-weight: 500;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all .15s ease;
+  }
+  .page-btn:hover:not([disabled]):not(.active) {
+    border-color: var(--accent); color: var(--accent); background: var(--accent-soft);
+  }
+  .page-btn.active {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+    box-shadow: 0 2px 6px rgba(166,124,63,.25);
+    cursor: default;
+  }
+  .page-btn[disabled] { opacity: .35; cursor: not-allowed; }
+  .page-btn svg { width: 14px; height: 14px; }
+  .page-ellipsis {
+    padding: 0 6px; color: var(--muted); font-weight: 600;
+    display: inline-flex; align-items: center;
+  }
+  .page-size {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 10px;
+    font-size: 12.5px; color: var(--text-2); outline: none;
+    cursor: pointer;
+  }
+  .page-size:hover { border-color: var(--accent); }
+
+  /* ============ Toast ============ */
+  .toast {
+    position: fixed; bottom: 22px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: var(--surface);
+    padding: 10px 18px; border-radius: 10px;
+    box-shadow: var(--shadow-lg); font-size: 13.5px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.err { background: var(--danger); }
+  .toast.ok  { background: var(--ok); }
+
+  @media (max-width: 900px) {
+    .topbar { padding: 10px 14px; }
+    .topbar-inner { flex-wrap: wrap; }
+    .brand { order: 1; }
+    .direction-group { order: 2; }
+    .word-input { order: 4; width: 100%; }
+    .btn-primary { order: 3; margin-left: auto; }
+    main { padding: 14px 14px 0; }
+    .toolbar { padding: 10px 14px; }
+    .detail { grid-template-columns: 1fr; gap: 18px; padding: 18px; }
+    /* Ẩn Ghi chú + Nguồn khi hẹp */
+    thead th:nth-child(6), tbody td:nth-child(6),
+    thead th:nth-child(7), tbody td:nth-child(7) { display: none; }
+    tbody td { padding: 12px 14px; font-size: 14px; }
+    .word-cell { font-size: 15.5px; }
+  }
+  @media (max-width: 600px) {
+    /* Ẩn thêm Loại + Cách đọc VN */
+    thead th:nth-child(2), tbody td:nth-child(2),
+    thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <img src="logo-full.png" alt="trevo · từ điển" class="brand-logo" />
+    </div>
+    <div class="direction-group">
+      <button id="btn-envi" class="dir-btn active" data-dir="en>vi">EN → VI</button>
+      <button id="btn-swap" class="dir-btn icon-only" title="Đảo hướng (Ctrl+/)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+      <button id="btn-vien" class="dir-btn" data-dir="vi>en">VI → EN</button>
+    </div>
+    <input id="word-input" class="word-input" type="text" placeholder="Gõ từ tiếng Anh… (Enter để tra)" autocomplete="off" spellcheck="false" />
+    <button id="btn-add" class="btn-primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Tra & Lưu
+    </button>
+  </div>
+  <div class="hint-bar" id="hint"></div>
+</div>
+
+<!-- ============ TOOLBAR ============ -->
+<div class="toolbar">
+  <div class="toolbar-inner">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="search" class="search-input" type="text" placeholder="Tìm trong danh sách…" />
+    </div>
+    <button class="btn-ghost" id="btn-export">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      CSV
+    </button>
+    <button class="btn-ghost" id="btn-import">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Nhập
+    </button>
+    <input type="file" id="file-import" accept=".csv,.txt" style="display:none" />
+    <button class="btn-ghost danger" id="btn-clear">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      Xóa hết
+    </button>
+    <div class="stats">
+      <div class="src-status" title="Trạng thái 5 nguồn từ điển">
+        <span class="source-dot" data-src="dict" title="Dictionary API"></span>
+        <span class="source-dot" data-src="wik"  title="Wiktionary"></span>
+        <span class="source-dot" data-src="dm"   title="Datamuse"></span>
+        <span class="source-dot" data-src="gt"   title="Google Translate"></span>
+        <span class="source-dot" data-src="mm"   title="MyMemory"></span>
+      </div>
+      <span id="stat-total"><b>0</b> từ</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAIN ============ -->
+<main>
+  <div class="lang-tabs" id="lang-tabs">
+    <button class="lang-tab active" data-lang="all">Tất cả <span class="count" id="cnt-all">0</span></button>
+    <button class="lang-tab" data-lang="en"><span class="flag">EN</span> English <span class="count" id="cnt-en">0</span></button>
+    <button class="lang-tab" data-lang="vi"><span class="flag">VI</span> Tiếng Việt <span class="count" id="cnt-vi">0</span></button>
+  </div>
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" data-sort="word" style="width:14%">Từ</th>
+            <th style="width:7%">Loại</th>
+            <th style="width:12%">Phiên âm IPA</th>
+            <th style="width:11%">Cách đọc VN</th>
+            <th style="width:22%">Nghĩa</th>
+            <th style="width:14%">Ghi chú</th>
+            <th style="width:8%">Nguồn</th>
+            <th style="width:160px; text-align:right">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination">
+      <div class="page-info" id="page-info">—</div>
+      <div class="page-nav" id="page-nav"></div>
+      <select class="page-size" id="page-size">
+        <option value="10">10 / trang</option>
+        <option value="20" selected>20 / trang</option>
+        <option value="50">50 / trang</option>
+        <option value="100">100 / trang</option>
+      </select>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   trevo · Từ điển Anh - Việt (light theme, focus vocab)
+   ========================================================= */
+
+const STORAGE_KEY = 'trevo_dict_v3';
+const SRC = { DICT: 'dict', WIK: 'wik', DM: 'dm', GT: 'gt', MM: 'mm' };
+const state = {
+  direction: 'en>vi',
+  entries: [],
+  filter: '',
+  sort: { key: 'createdAt', asc: false },
+  expanded: null,
+  page: 1,
+  pageSize: 20,
+  langTab: 'all', // 'all' | 'en' | 'vi'
+};
+
+/* IPA -> Vietnamese */
+const IPA_MAP = [
+  ['tʃ','ch'],['dʒ','giơ'],
+  ['eɪ','ây'],['aɪ','ai'],['ɔɪ','oi'],
+  ['aʊ','ao'],['əʊ','ô'],['oʊ','ô'],
+  ['ɪə','ia'],['eə','e-ơ'],['ʊə','u-ơ'],
+  ['iː','i'],['uː','u'],['ɑː','a'],['ɔː','o'],['ɜː','ơ'],
+  ['ɪ','i'],['æ','e'],['ɒ','o'],['ʊ','u'],
+  ['ʌ','â'],['ə','ơ'],['ɛ','e'],['ɑ','a'],['ɔ','o'],
+  ['θ','th'],['ð','đ'],['ʃ','s'],['ʒ','gi'],
+  ['ŋ','ng'],['j','i'],['w','u'],['r','rờ'],
+  ['f','ph'],['v','v'],['z','d'],['s','x'],
+  ['p','p'],['b','b'],['t','t'],['d','đ'],
+  ['k','k'],['g','g'],['ɡ','g'],['h','h'],
+  ['m','m'],['n','n'],['l','l'],
+  ['ˈ',''],['ˌ',''],['ː',''],['.','-'],['/','']
+];
+function ipaToViet(ipa) {
+  if (!ipa) return '';
+  let s = ipa;
+  for (const [k, v] of IPA_MAP) s = s.split(k).join(v);
+  return s.trim();
+}
+
+/* Storage */
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      state.entries = data.entries || [];
+      state.direction = data.direction || 'en>vi';
+      state.pageSize = data.pageSize || 20;
+      state.langTab = data.langTab || 'all';
+    }
+  } catch (e) {}
+}
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    entries: state.entries, direction: state.direction,
+    pageSize: state.pageSize, langTab: state.langTab,
+  }));
+}
+
+/* Src status */
+function markSrc(src) {
+  const dot = document.querySelector(`.source-dot[data-src="${src}"]`);
+  if (dot) {
+    dot.classList.add('on');
+    clearTimeout(dot._t);
+    dot._t = setTimeout(() => dot.classList.remove('on'), 2500);
+  }
+}
+
+/* APIs */
+async function apiGTranslate(text, sl, tl) {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&dt=sp&q=${encodeURIComponent(text)}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('gt failed');
+  const json = await r.json();
+  markSrc(SRC.GT);
+  const translation = (json[0] || []).map(c => c[0]).filter(Boolean).join('').trim();
+  const suggest = json[7] && json[7][1] ? json[7][1] : null;
+  return { translation, suggest };
+}
+async function apiMyMemory(text, sl, tl) {
+  try {
+    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sl}|${tl}`);
+    if (!r.ok) return null;
+    const json = await r.json();
+    markSrc(SRC.MM);
+    if (json.responseData && json.responseData.translatedText) {
+      return { translation: json.responseData.translatedText };
+    }
+  } catch (e) {}
+  return null;
+}
+async function apiDictionary(word) {
+  try {
+    const r = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.toLowerCase())}`);
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (!Array.isArray(data) || !data.length) return null;
+    markSrc(SRC.DICT);
+    const first = data[0];
+    const ipa = first.phonetic || (first.phonetics.find(p => p.text) || {}).text || '';
+    const audios = first.phonetics.filter(p => p.audio).map(p => p.audio);
+    const defs = [];
+    const syns = new Set(), ants = new Set();
+    for (const entry of data) {
+      for (const m of (entry.meanings || [])) {
+        for (const d of (m.definitions || [])) {
+          defs.push({ pos: m.partOfSpeech, def: d.definition, example: d.example || '' });
+          (d.synonyms || []).forEach(s => syns.add(s));
+          (d.antonyms || []).forEach(s => ants.add(s));
+        }
+        (m.synonyms || []).forEach(s => syns.add(s));
+        (m.antonyms || []).forEach(s => ants.add(s));
+      }
+    }
+    return { ipa, audios, defs, syns: [...syns].slice(0, 15), ants: [...ants].slice(0, 10) };
+  } catch (e) { return null; }
+}
+async function apiWiktionary(word) {
+  try {
+    const r = await fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(word.toLowerCase())}?redirect=true`);
+    if (!r.ok) return null;
+    const data = await r.json();
+    markSrc(SRC.WIK);
+    const en = data.en || [];
+    const defs = [];
+    for (const block of en) {
+      for (const d of (block.definitions || [])) {
+        const clean = String(d.definition || '').replace(/<[^>]+>/g, '').trim();
+        if (clean) defs.push({ pos: block.partOfSpeech, def: clean, example: (d.examples || []).map(x => String(x).replace(/<[^>]+>/g, '')).join(' · ') });
+      }
+    }
+    return { defs: defs.slice(0, 8) };
+  } catch (e) { return null; }
+}
+async function apiDatamuse(word) {
+  try {
+    const [syn, rel] = await Promise.all([
+      fetch(`https://api.datamuse.com/words?rel_syn=${encodeURIComponent(word)}&max=15`).then(r => r.json()).catch(() => []),
+      fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(word)}&max=10`).then(r => r.json()).catch(() => []),
+    ]);
+    markSrc(SRC.DM);
+    return {
+      syns: (syn || []).map(x => x.word).slice(0, 12),
+      related: (rel || []).map(x => x.word).slice(0, 10),
+    };
+  } catch (e) { return null; }
+}
+
+/* TTS + MP3 */
+async function loadVoices() {
+  return new Promise(resolve => {
+    let v = speechSynthesis.getVoices();
+    if (v && v.length) return resolve(v);
+    speechSynthesis.onvoiceschanged = () => resolve(speechSynthesis.getVoices());
+  });
+}
+function pickVoice(lang) {
+  const voices = speechSynthesis.getVoices();
+  return voices.find(v => v.lang && v.lang.toLowerCase().startsWith(lang.toLowerCase())) || voices[0];
+}
+function speakTTS(text, lang, btn) {
+  if (!text) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang === 'en' ? 'en-US' : 'vi-VN';
+    const v = pickVoice(u.lang); if (v) u.voice = v;
+    u.rate = 0.95;
+    if (btn) { btn.classList.add('playing'); u.onend = u.onerror = () => btn.classList.remove('playing'); }
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+let currentAudio = null;
+function playMp3(url, btn) {
+  if (currentAudio) { try { currentAudio.pause(); } catch (e) {} }
+  const a = new Audio(url); currentAudio = a;
+  if (btn) {
+    btn.classList.add('playing');
+    a.onended = a.onerror = () => btn.classList.remove('playing');
+  }
+  a.play().catch(() => { if (btn) btn.classList.remove('playing'); toast('Không phát được, thử TTS trong chi tiết', 'err'); });
+}
+
+/* Add entry */
+async function addWord(rawWord) {
+  const word = rawWord.trim();
+  if (!word) return;
+  const [srcLang, dstLang] = state.direction === 'en>vi' ? ['en','vi'] : ['vi','en'];
+
+  const dup = state.entries.find(e => e.word.toLowerCase() === word.toLowerCase() && e.srcLang === srcLang);
+  if (dup) {
+    state.expanded = dup.id;
+    // jump to page containing this entry
+    const idx = filteredSorted().findIndex(e => e.id === dup.id);
+    if (idx >= 0) state.page = Math.floor(idx / state.pageSize) + 1;
+    render();
+    toast('Từ đã có — đã mở chi tiết', 'ok');
+    return;
+  }
+
+  const entry = {
+    id: 'e_' + Math.random().toString(36).slice(2, 10),
+    srcLang, dstLang, word,
+    ipa: '', viRead: '', meaning: '', example: '',
+    sources: [], defs: [], syns: [], ants: [], related: [], audios: [],
+    createdAt: Date.now(), loading: true,
+  };
+  state.entries.unshift(entry);
+  state.page = 1;
+  save(); render();
+
+  try {
+    const [gt, mm] = await Promise.all([
+      apiGTranslate(word, srcLang, dstLang).catch(() => null),
+      apiMyMemory(word, srcLang, dstLang).catch(() => null),
+    ]);
+    if (gt) {
+      entry.meaning = gt.translation || '';
+      entry.sources.push(SRC.GT);
+      if (gt.suggest && gt.suggest.toLowerCase() !== word.toLowerCase()) showSuggest(entry.id, gt.suggest);
+    }
+    if (mm) {
+      entry.sources.push(SRC.MM);
+      if (!entry.meaning) entry.meaning = mm.translation;
+      entry.meaningAlt = mm.translation;
+    }
+    const englishWord = srcLang === 'en' ? word : (gt ? gt.translation.split(/[,;()]/)[0].trim() : word);
+    if (englishWord) {
+      const [dict, wik, dm] = await Promise.all([apiDictionary(englishWord), apiWiktionary(englishWord), apiDatamuse(englishWord)]);
+      if (dict) {
+        entry.ipa = dict.ipa || '';
+        entry.viRead = ipaToViet(entry.ipa);
+        entry.audios = dict.audios;
+        entry.defs.push(...dict.defs.map(d => ({...d, source: 'dict'})));
+        entry.syns = [...new Set([...entry.syns, ...dict.syns])];
+        entry.ants = dict.ants;
+        entry.example = (dict.defs.find(d => d.example) || {}).example || '';
+        if (dict.defs[0] && dict.defs[0].pos) entry.pos = shortPos(dict.defs[0].pos);
+        entry.sources.push(SRC.DICT);
+      }
+      if (wik) {
+        entry.defs.push(...wik.defs.map(d => ({...d, source: 'wik'})));
+        if (!entry.pos && wik.defs[0] && wik.defs[0].pos) entry.pos = shortPos(wik.defs[0].pos);
+        entry.sources.push(SRC.WIK);
+      }
+      if (dm)  { entry.syns = [...new Set([...entry.syns, ...dm.syns])].slice(0, 15); entry.related = dm.related; entry.sources.push(SRC.DM); }
+    }
+  } catch (e) { toast('Có lỗi khi tra từ', 'err'); }
+  finally {
+    entry.loading = false;
+    entry.sources = [...new Set(entry.sources)];
+    if (entry.defs.length) {
+      const counts = {};
+      for (const d of entry.defs) {
+        const p = String(d.pos || '').toLowerCase().trim();
+        if (p) counts[p] = (counts[p] || 0) + 1;
+      }
+      const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      if (best) entry.pos = shortPos(best[0]);
+    }
+    save(); render();
+  }
+}
+
+function showSuggest(entryId, suggest) {
+  const hint = document.getElementById('hint');
+  hint.innerHTML = '';
+  const box = document.createElement('button');
+  box.className = 'suggest-pill';
+  box.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Có phải: <b>${escapeHtml(suggest)}</b>? Nhấn để dùng`;
+  box.onclick = () => {
+    state.entries = state.entries.filter(e => e.id !== entryId);
+    save(); render(); hint.innerHTML = '';
+    addWord(suggest);
+  };
+  hint.appendChild(box);
+  setTimeout(() => { if (hint.contains(box)) box.remove(); }, 15000);
+}
+
+/* Render */
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function shortPos(pos) {
+  const map = {
+    noun: 'n.', verb: 'v.', adjective: 'adj.', adverb: 'adv.',
+    pronoun: 'pron.', preposition: 'prep.', conjunction: 'conj.',
+    interjection: 'interj.', determiner: 'det.', article: 'art.',
+    numeral: 'num.', particle: 'part.', 'proper noun': 'pn.',
+  };
+  const key = String(pos || '').toLowerCase().trim();
+  return map[key] || key.slice(0, 5);
+}
+const ICON = {
+  speak:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
+  del:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+  expand:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+  first:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>',
+  prev:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+  next:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+  last:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>',
+};
+
+function filteredSorted() {
+  const filter = state.filter.toLowerCase();
+  return state.entries
+    .filter(e => state.langTab === 'all' || e.srcLang === state.langTab)
+    .filter(e => !filter || e.word.toLowerCase().includes(filter) || (e.meaning || '').toLowerCase().includes(filter))
+    .sort((a, b) => {
+      const k = state.sort.key;
+      const av = a[k] || 0, bv = b[k] || 0;
+      const cmp = typeof av === 'string' ? av.localeCompare(bv) : (av - bv);
+      return state.sort.asc ? cmp : -cmp;
+    });
+}
+
+function render() {
+  const tbody = document.getElementById('tbody');
+  const all = filteredSorted();
+  const total = all.length;
+  const pageSize = state.pageSize;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (state.page > totalPages) state.page = totalPages;
+  if (state.page < 1) state.page = 1;
+  const startIdx = (state.page - 1) * pageSize;
+  const list = all.slice(startIdx, startIdx + pageSize);
+
+  document.getElementById('stat-total').innerHTML = `<b>${state.entries.length}</b> từ`;
+  const cntEn = state.entries.filter(e => e.srcLang === 'en').length;
+  const cntVi = state.entries.filter(e => e.srcLang === 'vi').length;
+  document.getElementById('cnt-all').textContent = state.entries.length;
+  document.getElementById('cnt-en').textContent = cntEn;
+  document.getElementById('cnt-vi').textContent = cntVi;
+  document.querySelectorAll('.lang-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.lang === state.langTab);
+  });
+
+  if (!total) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <h3>${state.entries.length ? 'Không có kết quả' : 'Danh sách đang trống'}</h3>
+      <p>${state.entries.length ? 'Thử từ khóa khác trong ô tìm kiếm.' : 'Gõ một từ ở thanh trên và bấm <b>Tra & Lưu</b>.'}</p>
+    </div></td></tr>`;
+  } else {
+    tbody.innerHTML = list.map(e => {
+      const expanded = state.expanded === e.id;
+      const srcBadges = (e.sources || []).map(s => `<span class="src-badge ${s}">${s}</span>`).join('');
+      const posText = e.pos || ((e.defs && e.defs[0] && e.defs[0].pos) ? shortPos(e.defs[0].pos) : '');
+      const dateAdded = e.createdAt ? new Date(e.createdAt).toLocaleDateString('vi-VN') : '';
+      let html = `
+        <tr data-id="${e.id}" class="${expanded ? 'expanded' : ''}">
+          <td>
+            <div class="word-cell" title="Thêm ngày ${dateAdded}">
+              <span contenteditable="true" data-field="word">${escapeHtml(e.word)}</span>
+              <span class="word-lang">${e.srcLang}</span>
+            </div>
+          </td>
+          <td><span class="pos-badge" contenteditable="true" data-field="pos">${escapeHtml(posText)}</span></td>
+          <td><span class="ipa-cell ${e.loading && !e.ipa ? 'skeleton' : ''}" contenteditable="true" data-field="ipa">${escapeHtml(e.ipa)}</span></td>
+          <td><span class="read-cell ${e.loading && !e.viRead ? 'skeleton' : ''}" contenteditable="true" data-field="viRead">${escapeHtml(e.viRead)}</span></td>
+          <td><span class="meaning-cell ${e.loading && !e.meaning ? 'skeleton' : ''}" contenteditable="true" data-field="meaning">${escapeHtml(e.meaning)}</span></td>
+          <td><span class="note-cell" contenteditable="true" data-field="note">${escapeHtml(e.note || '')}</span></td>
+          <td><div class="source-badges">${srcBadges || '<span class="src-badge">…</span>'}</div></td>
+          <td>
+            <div class="actions">
+              <button class="icon-btn" data-action="speak" title="Nghe">${ICON.speak}</button>
+              <button class="icon-btn" data-action="expand" title="${expanded ? 'Đóng' : 'Chi tiết'}" style="${expanded ? 'color:var(--accent);border-color:var(--accent);background:var(--accent-soft);' : ''}">${ICON.expand}</button>
+              <button class="icon-btn" data-action="refresh" title="Tra lại">${ICON.refresh}</button>
+              <button class="icon-btn danger" data-action="del" title="Xóa">${ICON.del}</button>
+            </div>
+          </td>
+        </tr>`;
+      if (expanded) html += `<tr class="detail-row"><td colspan="8">${renderDetail(e)}</td></tr>`;
+      return html;
+    }).join('');
+  }
+
+  renderPagination(total, totalPages, startIdx, list.length);
+}
+
+function renderDetail(e) {
+  const defs = (e.defs || []).slice(0, 12);
+  const defsHtml = defs.length
+    ? `<ul class="defs">${defs.map(d => `
+        <li><span class="pos">${escapeHtml(d.pos || 'n/a')}</span>${escapeHtml(d.def)}
+          ${d.example ? `<span class="ex">"${escapeHtml(d.example)}"</span>` : ''}
+        </li>`).join('')}</ul>`
+    : '<p style="color:var(--muted); font-size:13px">Chưa có định nghĩa chi tiết.</p>';
+
+  const audiosHtml = (e.audios || []).slice(0, 4).map((url, i) => `
+    <button class="audio-btn" data-audio="${escapeHtml(url)}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      MP3 #${i + 1}
+    </button>`).join('');
+
+  const synHtml = e.syns && e.syns.length
+    ? `<div class="word-chips">${e.syns.slice(0, 15).map(s => `<button class="word-chip" data-lookup="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}</div>`
+    : '<p style="color:var(--muted); font-size:13px">Không có đồng nghĩa.</p>';
+
+  const relHtml = e.related && e.related.length
+    ? `<h4 style="margin-top:14px">Từ liên quan</h4><div class="word-chips">${e.related.slice(0, 10).map(s => `<button class="word-chip" data-lookup="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}</div>`
+    : '';
+
+  const antHtml = e.ants && e.ants.length
+    ? `<h4 style="margin-top:14px">Trái nghĩa</h4><div class="word-chips">${e.ants.slice(0, 8).map(s => `<button class="word-chip" data-lookup="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}</div>`
+    : '';
+
+  return `
+    <div class="detail">
+      <div>
+        <h4>Định nghĩa (${defs.length})</h4>
+        ${defsHtml}
+        ${e.meaningAlt && e.meaningAlt !== e.meaning ? `<p style="margin-top:12px; color:var(--muted); font-size:13px"><b style="color:var(--text-2)">Dịch khác:</b> ${escapeHtml(e.meaningAlt)}</p>` : ''}
+      </div>
+      <div>
+        <h4>Phát âm</h4>
+        <div class="audio-list">
+          ${audiosHtml}
+          <button class="audio-btn tts" data-tts="${escapeHtml(e.word)}" data-lang="${e.srcLang}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
+            TTS
+          </button>
+        </div>
+        <h4 style="margin-top:16px">Đồng nghĩa</h4>
+        ${synHtml}
+        ${relHtml}${antHtml}
+      </div>
+    </div>`;
+}
+
+function renderPagination(total, totalPages, startIdx, shown) {
+  const info = document.getElementById('page-info');
+  const nav = document.getElementById('page-nav');
+  if (!total) {
+    info.innerHTML = '—';
+    nav.innerHTML = '';
+    return;
+  }
+  const from = startIdx + 1;
+  const to = startIdx + shown;
+  info.innerHTML = `Hiển thị <b>${from}–${to}</b> trên <b>${total}</b> từ · Trang <b>${state.page}/${totalPages}</b>`;
+
+  const p = state.page;
+  const pages = [];
+  const push = n => pages.push(n);
+  push(1);
+  if (p > 4) push('…');
+  for (let i = Math.max(2, p - 1); i <= Math.min(totalPages - 1, p + 1); i++) push(i);
+  if (p < totalPages - 3) push('…');
+  if (totalPages > 1) push(totalPages);
+
+  nav.innerHTML = `
+    <button class="page-btn" data-page="first" ${p === 1 ? 'disabled' : ''} title="Trang đầu">${ICON.first}</button>
+    <button class="page-btn" data-page="prev" ${p === 1 ? 'disabled' : ''} title="Trước">${ICON.prev}</button>
+    ${pages.map(x => x === '…'
+      ? `<span class="page-ellipsis">…</span>`
+      : `<button class="page-btn ${x === p ? 'active' : ''}" data-page="${x}">${x}</button>`
+    ).join('')}
+    <button class="page-btn" data-page="next" ${p === totalPages ? 'disabled' : ''} title="Sau">${ICON.next}</button>
+    <button class="page-btn" data-page="last" ${p === totalPages ? 'disabled' : ''} title="Trang cuối">${ICON.last}</button>
+  `;
+}
+
+/* Events */
+function toast(msg, kind) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (kind === 'err' ? ' err' : kind === 'ok' ? ' ok' : '');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.className = 'toast', 2500);
+}
+
+function setDirection(dir) {
+  state.direction = dir;
+  document.getElementById('btn-envi').classList.toggle('active', dir === 'en>vi');
+  document.getElementById('btn-vien').classList.toggle('active', dir === 'vi>en');
+  document.getElementById('word-input').placeholder = dir === 'en>vi'
+    ? 'Gõ từ tiếng Anh… (Enter để tra)'
+    : 'Gõ từ tiếng Việt… (Enter để tra)';
+  save();
+}
+
+function setLangTab(tab) {
+  state.langTab = tab;
+  state.page = 1;
+  const dirGroup = document.querySelector('.direction-group');
+  if (tab === 'en') {
+    setDirection('en>vi');
+    dirGroup.classList.add('locked');
+  } else if (tab === 'vi') {
+    setDirection('vi>en');
+    dirGroup.classList.add('locked');
+  } else {
+    dirGroup.classList.remove('locked');
+  }
+  save(); render();
+}
+
+async function refreshEntry(id) {
+  const e = state.entries.find(x => x.id === id);
+  if (!e) return;
+  const dir = state.direction;
+  state.direction = e.srcLang + '>' + e.dstLang;
+  const word = e.word;
+  state.entries = state.entries.filter(x => x.id !== id);
+  await addWord(word);
+  state.direction = dir;
+  save(); render();
+  toast('Đã tra lại', 'ok');
+}
+
+function exportCsv() {
+  const rows = [['Từ','Ngôn ngữ','IPA','Cách đọc VN','Nghĩa','Ví dụ','Nguồn']];
+  for (const e of state.entries) {
+    rows.push([e.word, e.srcLang, e.ipa || '', e.viRead || '', e.meaning || '', e.example || '', (e.sources || []).join('|')]);
+  }
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], {type: 'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `trevo-tu-dien-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Đã xuất ' + state.entries.length + ' từ', 'ok');
+}
+function importCsv(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = String(e.target.result || '').replace(/^﻿/, '');
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    let added = 0;
+    for (const line of lines.slice(1)) {
+      const parts = parseCsvLine(line);
+      if (!parts[0]) continue;
+      const [word, srcLang='en', ipa='', viRead='', meaning='', example=''] = parts;
+      if (state.entries.find(x => x.word.toLowerCase() === word.toLowerCase())) continue;
+      state.entries.push({
+        id: 'e_' + Math.random().toString(36).slice(2,10),
+        word, srcLang, dstLang: srcLang === 'en' ? 'vi' : 'en',
+        ipa, viRead, meaning, example, sources: [], defs: [], syns: [], ants: [], audios: [],
+        createdAt: Date.now(),
+      });
+      added++;
+    }
+    save(); render();
+    toast(`Đã nhập ${added} từ`, 'ok');
+  };
+  reader.readAsText(file, 'utf-8');
+}
+function parseCsvLine(line) {
+  const out = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { out.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  out.push(cur); return out;
+}
+
+/* Wire up */
+document.addEventListener('DOMContentLoaded', async () => {
+  load();
+  await loadVoices();
+  setDirection(state.direction);
+  setLangTab(state.langTab);
+  document.getElementById('page-size').value = String(state.pageSize);
+  render();
+
+  const input = document.getElementById('word-input');
+  input.focus();
+
+  document.getElementById('btn-envi').onclick = () => setDirection('en>vi');
+  document.getElementById('btn-vien').onclick = () => setDirection('vi>en');
+  document.getElementById('btn-swap').onclick = () =>
+    setDirection(state.direction === 'en>vi' ? 'vi>en' : 'en>vi');
+
+  document.getElementById('lang-tabs').addEventListener('click', ev => {
+    const btn = ev.target.closest('.lang-tab');
+    if (!btn) return;
+    setLangTab(btn.dataset.lang);
+  });
+
+  document.getElementById('btn-add').onclick = () => {
+    const w = input.value; input.value = ''; input.focus();
+    if (w.trim()) addWord(w);
+  };
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault();
+      const w = input.value; input.value = '';
+      if (w.trim()) addWord(w);
+    }
+  });
+  document.addEventListener('keydown', ev => {
+    if (ev.ctrlKey && ev.key === '/') { ev.preventDefault();
+      setDirection(state.direction === 'en>vi' ? 'vi>en' : 'en>vi');
+    }
+  });
+
+  document.getElementById('search').addEventListener('input', ev => {
+    state.filter = ev.target.value; state.page = 1; render();
+  });
+
+  document.getElementById('btn-export').onclick = exportCsv;
+  document.getElementById('btn-import').onclick = () => document.getElementById('file-import').click();
+  document.getElementById('file-import').addEventListener('change', ev => {
+    if (ev.target.files[0]) importCsv(ev.target.files[0]);
+    ev.target.value = '';
+  });
+  document.getElementById('btn-clear').onclick = () => {
+    if (!state.entries.length) return;
+    if (confirm(`Xóa hết ${state.entries.length} từ? Không thể hoàn tác.`)) {
+      state.entries = []; state.page = 1; save(); render();
+    }
+  };
+
+  document.querySelectorAll('thead th.sortable').forEach(th => {
+    th.onclick = () => {
+      const key = th.dataset.sort;
+      if (state.sort.key === key) state.sort.asc = !state.sort.asc;
+      else { state.sort.key = key; state.sort.asc = true; }
+      render();
+    };
+  });
+
+  document.getElementById('page-size').addEventListener('change', ev => {
+    state.pageSize = parseInt(ev.target.value, 10);
+    state.page = 1;
+    save(); render();
+  });
+
+  document.getElementById('page-nav').addEventListener('click', ev => {
+    const btn = ev.target.closest('.page-btn');
+    if (!btn || btn.disabled) return;
+    const p = btn.dataset.page;
+    const totalPages = Math.max(1, Math.ceil(filteredSorted().length / state.pageSize));
+    if (p === 'first') state.page = 1;
+    else if (p === 'prev') state.page = Math.max(1, state.page - 1);
+    else if (p === 'next') state.page = Math.min(totalPages, state.page + 1);
+    else if (p === 'last') state.page = totalPages;
+    else state.page = parseInt(p, 10);
+    render();
+    document.querySelector('.table-scroll').scrollTop = 0;
+  });
+
+  document.getElementById('tbody').addEventListener('click', ev => {
+    const audioBtn = ev.target.closest('.audio-btn[data-audio]');
+    if (audioBtn) { playMp3(audioBtn.dataset.audio, audioBtn); return; }
+    const ttsBtn = ev.target.closest('.audio-btn[data-tts]');
+    if (ttsBtn) { speakTTS(ttsBtn.dataset.tts, ttsBtn.dataset.lang, ttsBtn); return; }
+    const chip = ev.target.closest('.word-chip[data-lookup]');
+    if (chip) {
+      document.getElementById('word-input').value = chip.dataset.lookup;
+      setDirection('en>vi'); addWord(chip.dataset.lookup);
+      window.scrollTo({top: 0, behavior: 'smooth'});
+      return;
+    }
+    const btn = ev.target.closest('.icon-btn');
+    if (!btn) return;
+    const row = btn.closest('tr'); const id = row.dataset.id;
+    const entry = state.entries.find(e => e.id === id);
+    if (!entry) return;
+    const action = btn.dataset.action;
+    if (action === 'speak') {
+      if (entry.audios && entry.audios.length) playMp3(entry.audios[0], btn);
+      else speakTTS(entry.word, entry.srcLang, btn);
+    } else if (action === 'expand') {
+      state.expanded = state.expanded === id ? null : id;
+      render();
+    } else if (action === 'del') {
+      state.entries = state.entries.filter(e => e.id !== id);
+      if (state.expanded === id) state.expanded = null;
+      save(); render();
+    } else if (action === 'refresh') {
+      refreshEntry(id);
+    }
+  });
+
+  document.getElementById('tbody').addEventListener('blur', ev => {
+    const el = ev.target;
+    if (!el.matches || !el.matches('[contenteditable="true"]')) return;
+    const tr = el.closest('tr'); const id = tr && tr.dataset.id;
+    const entry = state.entries.find(e => e.id === id);
+    if (!entry) return;
+    const field = el.dataset.field;
+    const val = el.textContent.trim();
+    if (entry[field] !== val) {
+      entry[field] = val;
+      if (field === 'ipa') { entry.viRead = ipaToViet(val); render(); }
+      save();
+    }
+  }, true);
+  document.getElementById('tbody').addEventListener('keydown', ev => {
+    if (ev.key === 'Enter' && ev.target.matches && ev.target.matches('[contenteditable="true"]')) {
+      ev.preventDefault(); ev.target.blur();
+    } else if (ev.key === 'Escape' && ev.target.matches && ev.target.matches('[contenteditable="true"]')) {
+      ev.target.blur();
+    }
+  });
+});
+
+/* ============ ANTI-INSPECT (client-side, best-effort) ============ */
+(function() {
+  // Chặn chuột phải
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault(); return false;
+  }, true);
+
+  // Chặn phím tắt: F12, Ctrl+U (view-source), Ctrl+S (save), Ctrl+P (print),
+  // Ctrl+Shift+I/J/C/K (devtools/console/inspector)
+  document.addEventListener('keydown', function(e) {
+    const key = (e.key || '').toLowerCase();
+    const ctrl = e.ctrlKey || e.metaKey;
+
+    // F12
+    if (key === 'f12') { e.preventDefault(); e.stopPropagation(); return false; }
+
+    // Ctrl+U (view source), Ctrl+S (save), Ctrl+P (print)
+    if (ctrl && !e.shiftKey && !e.altKey && (key === 'u' || key === 's' || key === 'p')) {
+      e.preventDefault(); e.stopPropagation(); return false;
+    }
+
+    // Ctrl+Shift+I / J / C / K (mở DevTools / Console / Inspector)
+    if (ctrl && e.shiftKey && ['i','j','c','k'].includes(key)) {
+      e.preventDefault(); e.stopPropagation(); return false;
+    }
+
+    // Cmd+Option+I / J / C (Mac)
+    if (e.metaKey && e.altKey && ['i','j','c'].includes(key)) {
+      e.preventDefault(); e.stopPropagation(); return false;
+    }
+  }, true);
+
+  // Chặn kéo-thả (drag) ảnh logo và các phần tử khác
+  document.addEventListener('dragstart', function(e) {
+    e.preventDefault(); return false;
+  }, true);
+
+  // Chặn copy khi không phải input/contenteditable
+  document.addEventListener('copy', function(e) {
+    const t = e.target;
+    if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA' && !t.isContentEditable)) {
+      e.preventDefault();
+    }
+  }, true);
+
+  // Cảnh báo trong console (dọa người copy-paste code lạ)
+  try {
+    console.log('%c⛔ DỪNG LẠI!', 'color:#a67c3f;font-size:28px;font-weight:800');
+    console.log('%cĐây là công cụ dành cho developer. Nếu ai đó bảo bạn dán code vào đây để "hack" hoặc "unlock" gì đó — đây là LỪA ĐẢO. Nó sẽ đánh cắp dữ liệu của bạn.', 'color:#b04d4d;font-size:14px;line-height:1.5');
+    console.log('%c© trevo · từ điển sống', 'color:#857b6d;font-size:12px');
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>
