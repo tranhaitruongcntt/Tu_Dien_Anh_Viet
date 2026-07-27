@@ -881,13 +881,22 @@ function escapeHtml(s) {
 }
 function shortPos(pos) {
   const map = {
-    noun: 'n.', verb: 'v.', adjective: 'adj.', adverb: 'adv.',
-    pronoun: 'pron.', preposition: 'prep.', conjunction: 'conj.',
-    interjection: 'interj.', determiner: 'det.', article: 'art.',
-    numeral: 'num.', particle: 'part.', 'proper noun': 'pn.',
+    noun: 'Danh từ', verb: 'Động từ',
+    adjective: 'Tính từ', adverb: 'Trạng từ',
+    pronoun: 'Đại từ', preposition: 'Giới từ',
+    conjunction: 'Liên từ', interjection: 'Thán từ',
+    determiner: 'Định từ', article: 'Mạo từ',
+    numeral: 'Số từ', particle: 'Tiểu từ',
+    'proper noun': 'Danh từ riêng', 'auxiliary verb': 'Trợ động từ',
+    'modal verb': 'Động từ khiếm khuyết', abbreviation: 'Viết tắt',
+    // giữ ngược cho entry cũ đã lưu ở localStorage
+    'n.': 'Danh từ', 'v.': 'Động từ', 'adj.': 'Tính từ', 'adv.': 'Trạng từ',
+    'pron.': 'Đại từ', 'prep.': 'Giới từ', 'conj.': 'Liên từ',
+    'interj.': 'Thán từ', 'det.': 'Định từ', 'art.': 'Mạo từ',
+    'num.': 'Số từ', 'part.': 'Tiểu từ', 'pn.': 'Danh từ riêng',
   };
   const key = String(pos || '').toLowerCase().trim();
-  return map[key] || key.slice(0, 5);
+  return map[key] || (pos || '');
 }
 const ICON = {
   speak:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
