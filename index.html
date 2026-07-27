@@ -505,10 +505,12 @@
     thead th:nth-child(7), tbody td:nth-child(7) { display: none; }
     tbody td { padding: 12px 14px; font-size: 14px; }
     .word-cell { font-size: 15.5px; }
-    /* Lang tabs cuộn ngang nếu tràn */
-    .lang-tabs { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+    /* Lang tabs — thu nhỏ trên tablet */
+    .lang-tabs { overflow-x: auto; scrollbar-width: none; max-width: 100%; padding: 3px; margin-bottom: 10px; border-radius: 10px; }
     .lang-tabs::-webkit-scrollbar { display: none; }
-    .lang-tab { flex-shrink: 0; }
+    .lang-tab { flex-shrink: 0; padding: 7px 12px; font-size: 12.5px; gap: 6px; }
+    .lang-tab .count { padding: 1px 7px; font-size: 11px; }
+    .lang-tab .flag { padding: 1px 5px; font-size: 10px; }
     /* Pagination gọn */
     .pagination { padding: 12px 14px; gap: 8px; }
     .page-info { font-size: 12px; width: 100%; order: -1; text-align: center; }
@@ -540,9 +542,10 @@
     .composer-head .sources { display: none; }
     /* Table wrap không có border radius trên mobile — full bleed */
     .table-wrap { border-radius: 10px; margin-left: -2px; margin-right: -2px; }
-    /* Lang tab nhỏ */
-    .lang-tab { padding: 8px 12px; font-size: 12.5px; }
-    .lang-tab .count { padding: 1px 6px; font-size: 10.5px; }
+    /* Lang tab nhỏ hơn nữa cho mobile */
+    .lang-tabs { padding: 2px; margin-bottom: 8px; }
+    .lang-tab { padding: 6px 10px; font-size: 11.5px; gap: 5px; }
+    .lang-tab .count { padding: 1px 5px; font-size: 10px; }
     .lang-tab .flag { display: none; }
     /* Pagination — ẩn nút First/Last */
     .page-btn[data-page="first"], .page-btn[data-page="last"] { display: none; }
@@ -1201,10 +1204,9 @@ function importCsv(file) {
   const reader = new FileReader();
   reader.onload = e => {
     const text = String(e.target.result || '').replace(/^﻿/, '');
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    if (!lines.length) { toast('File rỗng', 'err'); return; }
-    // Đọc header để hỗ trợ cả format cũ (7 cột) lẫn mới (10 cột)
-    const header = parseCsvLine(lines[0]).map(h => h.toLowerCase().trim());
+    const rowsAll = parseCsvAll(text);
+    if (!rowsAll.length) { toast('File rỗng', 'err'); return; }
+    const header = rowsAll[0].map(h => h.toLowerCase().trim());
     const idx = {
       word:    header.findIndex(h => h.startsWith('từ') || h === 'word'),
       srcLang: header.findIndex(h => h.startsWith('ngôn') || h === 'lang' || h === 'srclang'),
@@ -1221,8 +1223,7 @@ function importCsv(file) {
     if (idx.srcLang < 0) idx.srcLang = 1;
 
     let added = 0, skipped = 0;
-    for (const line of lines.slice(1)) {
-      const parts = parseCsvLine(line);
+    for (const parts of rowsAll.slice(1)) {
       const word = (parts[idx.word] || '').trim();
       if (!word) continue;
       const srcLang = (parts[idx.srcLang] || 'en').trim() || 'en';
@@ -1251,6 +1252,7 @@ function importCsv(file) {
   reader.readAsText(file, 'utf-8');
 }
 function parseCsvLine(line) {
+  // Giữ lại cho backward-compat (chỉ dùng cho 1 dòng đã tách sẵn)
   const out = []; let cur = ''; let inQ = false;
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
@@ -1265,6 +1267,31 @@ function parseCsvLine(line) {
     }
   }
   out.push(cur); return out;
+}
+// Parser CSV chuẩn RFC 4180: quote-aware, xử lý \n / \r\n bên trong field bọc quote
+function parseCsvAll(text) {
+  const rows = [];
+  let row = [], cur = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"' && text[i+1] === '"') { cur += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\r' || c === '\n') {
+        if (c === '\r' && text[i+1] === '\n') i++;
+        row.push(cur); cur = '';
+        if (row.length > 1 || row[0] !== '') rows.push(row);
+        row = [];
+      }
+      else cur += c;
+    }
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
 }
 
 /* Wire up */
