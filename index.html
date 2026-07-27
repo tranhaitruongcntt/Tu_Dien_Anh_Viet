@@ -867,20 +867,39 @@ async function apiDatamuse(word) {
   } catch (e) { return null; }
 }
 
-// Spell-check: Datamuse `sp` trả gợi ý từ đúng khi input sai chính tả
+// Spell-check ưu tiên LanguageTool (chuẩn), fallback Datamuse
 async function apiSpellCheck(word) {
+  // 1) LanguageTool — bắt được cả typo phổ biến (recieve → receive)
   try {
-    const r = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(word)}&max=3`);
+    const body = new URLSearchParams({
+      text: word, language: 'en-US', enabledOnly: 'false',
+    });
+    const r = await fetch('https://api.languagetool.org/v2/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    if (r.ok) {
+      const j = await r.json();
+      if (j.matches && j.matches.length) {
+        const m = j.matches[0];
+        if (m.replacements && m.replacements.length) {
+          const s = m.replacements[0].value;
+          if (s && s.toLowerCase() !== word.toLowerCase()) return s;
+        }
+      }
+    }
+  } catch (e) { /* fall through */ }
+
+  // 2) Fallback Datamuse (bỏ chính từ input khỏi danh sách)
+  try {
+    const r = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(word)}&max=5`);
     if (!r.ok) return null;
     const arr = await r.json();
     if (!Array.isArray(arr) || !arr.length) return null;
-    const top = arr[0];
-    if (!top.word) return null;
-    // Nếu top match chính là input → đúng chính tả
-    if (top.word.toLowerCase() === word.toLowerCase()) return null;
-    // Score < 60 → gợi ý yếu, bỏ qua để tránh false positive
-    if (typeof top.score === 'number' && top.score < 60) return null;
-    return top.word;
+    const filtered = arr.filter(x => x.word && x.word.toLowerCase() !== word.toLowerCase());
+    if (!filtered.length) return null;
+    return filtered[0].word;
   } catch (e) { return null; }
 }
 
