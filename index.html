@@ -1304,7 +1304,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   render();
 
   const input = document.getElementById('word-input');
-  input.focus();
+  const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  if (!isTouch) input.focus();
 
   document.getElementById('btn-envi').onclick = () => setDirection('en>vi');
   document.getElementById('btn-vien').onclick = () => setDirection('vi>en');
@@ -1318,15 +1319,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('btn-add').onclick = () => {
-    const w = input.value; input.value = ''; input.focus();
+    const w = input.value; input.value = '';
+    if (isTouch) input.blur(); else input.focus();
     if (w.trim()) addWord(w);
   };
   input.addEventListener('keydown', ev => {
     if (ev.key === 'Enter') { ev.preventDefault();
       const w = input.value; input.value = '';
+      if (isTouch) input.blur();
       if (w.trim()) addWord(w);
     }
   });
+  // Mobile: tap ngoài input/contenteditable → tắt bàn phím
+  if (isTouch) {
+    document.addEventListener('touchend', ev => {
+      const t = ev.target;
+      if (!t.closest('input, textarea, select, [contenteditable="true"], button')) {
+        const ae = document.activeElement;
+        if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) {
+          ae.blur();
+        }
+      }
+    }, { passive: true });
+  }
   document.addEventListener('keydown', ev => {
     if (ev.ctrlKey && ev.key === '/') { ev.preventDefault();
       setDirection(state.direction === 'en>vi' ? 'vi>en' : 'en>vi');
